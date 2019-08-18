@@ -11,7 +11,7 @@
 
 FIND_PATH(HACKRF_INCLUDE_DIR hackrf.h
   ${HACKRF_DIR}/include
-  /usr/local/include/libhackrf
+  /usr/include/libhackrf
 )
 
 FIND_LIBRARY(HACKRF_LIBRARY
@@ -22,6 +22,7 @@ FIND_LIBRARY(HACKRF_LIBRARY
   /usr/lib64
   /usr/lib
   /usr/local/lib
+  /usr/lib/x86_64-linux-gnu
   NO_DEFAULT_PATH
 )
 
