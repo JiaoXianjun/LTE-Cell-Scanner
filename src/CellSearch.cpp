@@ -114,6 +114,8 @@ void print_usage() {
   cout << "      number of tries at each frequency/file (default: 1)" << endl;
   cout << "    -m --num-reserve N" << endl;
   cout << "      number of reserved frequency-ppm peak pairs in pre-search phase (default: 1)" << endl;
+  cout << "    -o --offset-tuning" << endl;
+  cout << "      enable offset tuning for E4000 based devices" << endl;
   cout << "  Dongle LO correction options:" << endl;
   cout << "    -t --twisted" << endl;
   cout << "      enable original sampling-carrier-twisted mode (default is disable and using carrier&sampling isolated pre-search to support external mixer/LNB)" << endl;
@@ -175,7 +177,8 @@ void parse_commandline(
   uint16 & xcorr_workitem,
   uint16 & num_reserve,
   uint16 & num_loop,
-  int16  & gain
+  int16  & gain,
+  bool & offset_tuning
 ) {
   // Default values
   freq_start=-1;
@@ -195,6 +198,7 @@ void parse_commandline(
   num_reserve = 2;
   num_loop = 0;
   gain = -9999;
+  offset_tuning = false;
 
   while (1) {
     static struct option long_options[] = {
@@ -220,11 +224,12 @@ void parse_commandline(
       {"xcorr-workitem", required_argument, 0, 'u'},
       {"num-reserve", required_argument, 0, 'm'},
       {"num-loop", required_argument, 0, 'k'},
+      {"offset-tuning", no_argument, 0, 'o'},
       {0, 0, 0, 0}
     };
     /* getopt_long stores the option index here. */
     int option_index = 0;
-    int c = getopt_long (argc, argv, "hvbs:e:n:tp:c:z:y:rld:i:a:g:j:w:u:m:k:",
+    int c = getopt_long (argc, argv, "hvbs:e:n:tp:c:z:y:rld:i:a:g:j:w:u:m:k:o",
                      long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -365,6 +370,9 @@ void parse_commandline(
         break;
       case 'k':
         num_loop = strtol(optarg,&endp,10);
+        break;
+      case 'o':
+        offset_tuning=true;
         break;
       case '?':
         /* getopt_long already printed an error message. */
@@ -531,7 +539,8 @@ int config_rtlsdr(
   const double & fc,
   rtlsdr_device *& dev,
   double & fs_programmed,
-  const int16 & gain
+  const int16 & gain,
+  const bool & offset_tuning
 ) {
   int32 device_index=device_index_cmdline;
 
@@ -562,6 +571,18 @@ int config_rtlsdr(
   if (rtlsdr_open(&dev,device_index)<0) {
     cerr << "config_rtlsdr Error: unable to open RTLSDR device" << endl;
 //    ABORT(-1);
+    return(1);
+  }
+
+  if (rtlsdr_get_tuner_type(dev) == RTLSDR_TUNER_E4000) {
+    if (rtlsdr_set_offset_tuning(dev, offset_tuning) < 0) {
+      cerr << "rtlsdr_set_offset_tuning error" << endl;
+      return(1);
+    } else if (offset_tuning) {
+      printf("Offset tuning enabled\n");
+    }
+  } else if (offset_tuning) {
+    cerr << "Offset tuning only supported by E4000 tuner" << endl;
     return(1);
   }
 
@@ -918,9 +939,10 @@ int main(
   uint16 xcorr_workitem;
   uint16 num_reserve;
   uint16 num_loop; // it is not so useful
+  bool offset_tuning;
 
   // Get search parameters from user
-  parse_commandline(argc,argv,freq_start,freq_end,num_try,sampling_carrier_twist,ppm,correction,save_cap,use_recorded_data,data_dir,device_index, record_bin_filename, load_bin_filename,opencl_platform,opencl_device,filter_workitem,xcorr_workitem,num_reserve,num_loop,gain);
+  parse_commandline(argc,argv,freq_start,freq_end,num_try,sampling_carrier_twist,ppm,correction,save_cap,use_recorded_data,data_dir,device_index, record_bin_filename, load_bin_filename,opencl_platform,opencl_device,filter_workitem,xcorr_workitem,num_reserve,num_loop,gain,offset_tuning);
 
   // Open the USB device (if necessary).
   dev_type_t::dev_type_t dev_use = dev_type_t::UNKNOWN;
@@ -936,7 +958,7 @@ int main(
   if ( dongle_used && freq_start!=9999e6) {
 
     #ifdef HAVE_RTLSDR
-    if ( config_rtlsdr(sampling_carrier_twist,correction,device_index,freq_start,rtlsdr_dev,fs_programmed,gain) == 0 ) {
+    if ( config_rtlsdr(sampling_carrier_twist,correction,device_index,freq_start,rtlsdr_dev,fs_programmed,gain,offset_tuning) == 0 ) {
       dev_use = dev_type_t::RTLSDR;
       cout << "RTLSDR device FOUND!\n";
     } else {
@@ -1178,7 +1200,9 @@ int main(
       continue;
     }
 
-    capbuf = capbuf - mean(capbuf); // remove DC
+    if (!offset_tuning) {
+      capbuf = capbuf - mean(capbuf); // remove DC
+    }
 
     freq_correction = fc_programmed*(correction-1)/correction;
 //    if (!dongle_used) { // if dongle is not used, do correction explicitly. Because if dongle is used, the correction is done when tuning dongle's frequency.
