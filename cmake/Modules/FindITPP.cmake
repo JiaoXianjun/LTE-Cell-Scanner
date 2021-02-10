@@ -23,6 +23,7 @@ FIND_LIBRARY(ITPP_LIBRARY_NORMAL
   /usr/pkgs64/lib
   /usr/lib64
   /usr/lib/x86_64-linux-gnu
+  /usr/lib/aarch64-linux-gnu
   /usr/lib
   /usr/local/lib
   NO_DEFAULT_PATH
