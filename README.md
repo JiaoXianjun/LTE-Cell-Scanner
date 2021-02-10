@@ -16,7 +16,9 @@ New features, make and Usages
 
 CellSearch and LTE-Tracker program will be generated in build/src. Use "--help" when invoke program to see all options.
 
-(You may need some related libraries, such as itpp, fftw, libboost-, Curses, ... etc.)
+(You may need some related libraries, such as itpp, fftw, libboost-, Curses, ... etc.) For most Ubuntu users, the following should be enough to get the necessary libraries installed:
+
+    sudo apt install cmake libitpp-dev librtlsdr-dev libopenblas-dev libncurses5-dev
 
 **0x02. basic usage (If you have OpenCL, make sure those .cl files in LTE-Cell-Scanner/src have been copy to program directory)**
             
