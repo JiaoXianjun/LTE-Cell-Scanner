@@ -954,7 +954,7 @@ int config_bladerf(
       if (dev!=NULL) {bladerf_close(dev); dev = NULL; return(-1);}
   }
 
-  unsigned int actual_frequency;
+  long unsigned int actual_frequency;
   status = bladerf_get_frequency(dev, BLADERF_MODULE_RX, &actual_frequency);
   if (status != 0) {
       printf("config_bladerf bladerf_get_frequency: Failed to read back frequency: %s\n",

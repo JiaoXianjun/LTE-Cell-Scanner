@@ -87,7 +87,7 @@ int open_bladerf_board(bladerf_device * & bladerf_dev, unsigned int freq_hz, uns
     return(-1);
   }
 
-  status = bladerf_sync_config(bladerf_dev, BLADERF_MODULE_RX, BLADERF_FORMAT_SC16_Q11, 2, buffer_size, 1, 3500);
+  status = bladerf_sync_config(bladerf_dev, BLADERF_RX_X1, BLADERF_FORMAT_SC16_Q11, 2, buffer_size, 1, 3500);
   if (status != 0) {
      printf("open_bladerf_board bladerf_sync_config: Failed to configure sync interface: %s\n",
              bladerf_strerror(status));
