@@ -11,6 +11,7 @@
 
 FIND_PATH(HACKRF_INCLUDE_DIR hackrf.h
   ${HACKRF_DIR}/include
+  /usr/local/include/libhackrf
   /usr/include/libhackrf
 )
 
@@ -19,6 +20,7 @@ FIND_LIBRARY(HACKRF_LIBRARY
   PATHS ${HACKRF_DIR}/libs
   "${HACKRF_DIR}\\win32\\lib"
   /usr/pkgs64/lib
+  /usr/lib/aarch64-linux-gnu
   /usr/lib64
   /usr/lib
   /usr/local/lib

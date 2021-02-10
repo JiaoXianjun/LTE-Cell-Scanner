@@ -1,4 +1,4 @@
-An OpenCL accelerated TDD/FDD LTE Scanner (from rtlsdr/hackRF/bladeRF A/D samples to PDSCH output and RRC SIB messages decoded). By Jiao Xianjun (putaoshu@gmail.com). Tech blog: http://sdr-x.github.io
+An OpenCL accelerated TDD/FDD LTE Scanner (from rtlsdr/hackRF/bladeRF A/D samples to PDSCH output and RRC SIB messages decoded). By Jiao Xianjun (putaoshu@msn.com). Tech blog: http://sdr-x.github.io
 
 ------------------------------
 New features, make and Usages
