@@ -65,7 +65,7 @@ CellSearch and LTE-Tracker program will be generated in build/src. Use "--help" 
                                                     <numberOfRA-Preambles><n52/></numberOfRA-Preambles>
     ...
 
-**0x03. Change gian by hand.**
+**0x03. Change gain by hand.**
 
 Use "-g X" to set gain value X to hardware. If "-g" is not used, default values are used:
 
