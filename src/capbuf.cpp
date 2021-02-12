@@ -594,18 +594,23 @@ int capture_data(
         ABORT(-1);
       }
 
-      result = hackrf_stop_rx(hackrf_dev);
-      if( result != HACKRF_SUCCESS ) {
-        printf("hackrf_stop_rx() failed: %s (%d)\n", hackrf_error_name((hackrf_error)result), result);
-        ABORT(-1);
-      }
+      // result = hackrf_stop_rx(hackrf_dev);
+      // if( result != HACKRF_SUCCESS ) {
+      //   printf("hackrf_stop_rx() failed: %s (%d)\n", hackrf_error_name((hackrf_error)result), result);
+      //   ABORT(-1);
+      // }
 
       hackrf_rx_count = 0; // clear counter
-      result = hackrf_start_rx(hackrf_dev, capbuf_hackrf_callback, NULL);
 
-      if( result != HACKRF_SUCCESS ) {
-        printf("hackrf_start_rx() failed: %s (%d)\n", hackrf_error_name((hackrf_error)result), result);
-        ABORT(-1);
+      static int aaa = 0; // the new hackrf driver only needs start once!
+      if (aaa == 0) {
+        result = hackrf_start_rx(hackrf_dev, capbuf_hackrf_callback, NULL);
+        // printf("%d\n", aaa);
+        if( result != HACKRF_SUCCESS ) {
+          printf("hackrf_start_rx() failed: %s (%d)\n", hackrf_error_name((hackrf_error)result), result);
+          ABORT(-1);
+        }
+        aaa++;
       }
 
       while(hackrf_is_streaming(hackrf_dev) == HACKRF_TRUE) {
