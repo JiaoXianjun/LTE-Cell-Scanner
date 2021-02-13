@@ -1,0 +1,44 @@
+.smtaglobalheader        { position:fixed; top:0px; left:0px; right:0px; height:50px; background-color:#A2A2A2; z-index:2; min-width:800px; }
+.smtaglobalbody          { position: relative; margin:0px; background-color:#FFFFFF; min-width:800px; }
+.smtaglobalpage          { position:float; width:auto; max-width:964px; margin:auto; padding-left:30px; padding-right:30px; padding-top:90px; padding-bottom:60px; background-color:#FFFFFF; }
+.smtaglobalfooter        { position:float; top:0px; left:0px; right:0px; height:50px; background-color:#A2A2A2; min-width:800px; }
+.smtaglobaltopmenu       { position:float; width:auto; max-width:1024px; margin:auto; font-size:18px; overflow:hidden; }
+.smtaglobalbottommenu    { position:float; width:auto; max-width:1024px; margin:auto; font-size:10px; color:#F0F0F0; }
+.smtaglobalmenulist      { list-style-type:none; margin:0; padding:0; overflow:hidden; }
+.smtaglobalmenuitem      { float:left; display:block; color:#FFFFFF; text-align:center; padding:14px 24px; text-decoration:none; }
+.smtaglobalmenuitemlogo  { float:left; display:block; color:#FFFFFF; text-align:center; padding:7px 24px; text-decoration:none; }
+.smtaglobalsectionheader { background-color:#F8F8F8; border:1px black solid }
+.smtapageheader          { text-align:center;color:#02AEFF;width:900px; }
+.smtasectionheader       { text-align:center;color:#02AEFF;width:900px; }
+.smtatextfocus           { color:#02AEFF; }
+.smtatextfocusitalic     { color:#02AEFF;font-style:italic; }
+.smtaforminput           { padding: 8px 12px; font-size:16px; }
+.smtasubmitbutton        { background-color:#02AEFF; border:none; color:white; padding: 10px 12px; text-align:center; text-decoration:none; display:inline-block; font-size:16px; }
+.smtatabbuttonactive     { background-color:#02AEFF; border:none; color:white; padding: 10px 12px; text-align:center; text-decoration:none; display:inline-block; font-size:16px; }
+.smtatabbutton           { background-color:#E0E0E0; border:none; color:white; padding: 10px 12px; text-align:center; text-decoration:none; display:inline-block; font-size:16px; }
+.smtamousetip            { position:absolute; display:none; width:200px; height:100px; left:0px; top:200px; padding-left:5px; padding-top:5px; background-color:#4CAF50; opacity:0.9; }
+.smtamouseneedle         { position:absolute; display:none; width:3px; height:20px; left:0px; top:200px; background-color:#000000; }
+.smtaruler               { position:absolute; display:none; width:20px; height:3px; left:0px; top:200px; background-color:#000000; }
+.smtarulerlabel          { position:absolute; display:none; width:100px; height:20px; left:0px; top:200px; color:#000000; opacity:1; }
+.smtalic                 { position:absolute; display:none; width:100px; height:20px; left:0px; top:200px; padding-top:2px; background-color:#FFFFFF; opacity:0.8; border-left-style:solid; border-right-style:solid; text-align:center; }
+
+
+.localmenu       { left:10px; right:10px; background-color:#F0F0F0; border:2px solid #C0C0C0; }
+li a:hover       { background-color:#010101; }
+
+input[type="submit"]:hover { opacity:0.7; }
+
+.active          { background-color:#4CAF50; }
+.smtaheader      { font-weight:bold; }
+.smtaitalic      { font-style:italic; }
+.smtatitle       { border:1px #6600FF solid; padding:5px; vertical-align: middle; }
+.smtawarning     { font-weight:bold; color:red; }
+.smtabuttonshow  { width:60px; height:20px; }
+
+.wrapper { transform:rotate(0deg); }
+.smtafreqheader  { font-size:55%; text-align:center; color:#FFFFFF; background-color:#606060;      }
+.smtafreqblock   {  }
+.smtafreqlabel   { font-size:55%; margin:0px; writing-mode:vertical-rl; }
+
+
+#cookieConsent { background-color:rgba(20,20,20,0.8); min-height:160px; color:#000CCC; padding:25px; position:fixed; bottom:0; left:0; right:0; display:block; z-index:9999; }
