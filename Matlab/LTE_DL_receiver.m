@@ -16,6 +16,7 @@
 % clear all;
 function LTE_DL_receiver(varargin)
 close all;
+warning('off','all');
 
 sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned with bin file!!!
 num_radioframe = 8; % each radio frame length 10ms. MIB period is 4 radio frame
