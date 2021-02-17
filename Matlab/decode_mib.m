@@ -93,8 +93,8 @@ for frame_timing_guess=0:3
           llr(llr>300) = 300;
           llr(llr<-300) = -300;
           c_est = step(Hdec, [llr, llr, llr].').';
+          c_est = c_est(length(d_est) + 1 : 2*length(d_est) );
         end
-        c_est = c_est(length(d_est) + 1 : 2*length(d_est) );
         % Calculate the received CRC
         crc_est=lte_calc_crc(c_est(1:24),16);
         %c_est(25:end)

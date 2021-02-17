@@ -133,7 +133,14 @@ X=repmat(transpose(rs_set),1,nRS);
 Y=[shift_1+1:6:nSC; shift_2+1:6:nSC];
 Y=repmat(Y,ceil(n_rs_ofdm/2),1);
 Y=Y(1:n_rs_ofdm,:);
-ce_tfg=transpose(griddata(X,Y,ce_filt,transpose(1:n_ofdm),1:nSC));
+
+xq = transpose(1:n_ofdm);
+yq = 1:nSC;
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+if isOctave
+  [xq,yq] = meshgrid(xq,yq);
+end
+ce_tfg=transpose(griddata(X,Y,ce_filt,xq,yq));
 
 % Fill in NaN samples at the edges
 first_finite=0;

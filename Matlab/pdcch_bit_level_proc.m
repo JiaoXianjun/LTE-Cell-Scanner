@@ -14,8 +14,12 @@ function pdcch_info = pdcch_bit_level_proc(peak, e_est)
 % to get_num_DCI_bits(), you will find there are only two types of length:
 % 31 and 41.
 
+isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+
 % for matlab native viterbi decoder
-Hdec = comm.ViterbiDecoder( poly2trellis(7,[133 171 165]), 'TerminationMethod', 'Terminated');
+if ~isOctave
+  Hdec = comm.ViterbiDecoder( poly2trellis(7,[133 171 165]), 'TerminationMethod', 'Terminated');
+end
 
 % -------blind search in common search space-----------
 num_CCE = 16;  % common search space
@@ -45,12 +49,15 @@ for l = 1 : length(L_set)
             d_est=lte_conv_deratematch(e_est_tmp, num_bits);
             
             % Viterbi decode
-%             c_est=lte_conv_decode(d_est);
-            llr = -log((d_est(:).')./((1-d_est(:)).'));
-            llr(llr>300) = 300;
-            llr(llr<-300) = -300;
-            c_est = step(Hdec, [llr, llr, llr].').';
-            c_est = c_est(length(d_est) + 1 : 2*length(d_est) );
+            if isOctave
+                      c_est=lte_conv_decode(d_est);
+            else
+              llr = -log((d_est(:).')./((1-d_est(:)).'));
+              llr(llr>300) = 300;
+              llr(llr<-300) = -300;
+              c_est = step(Hdec, [llr, llr, llr].').';
+              c_est = c_est(length(d_est) + 1 : 2*length(d_est) );
+            end
             
             % Calculate the received CRC
             crc_est=lte_calc_crc(c_est(1:(num_bits-16)),16);
