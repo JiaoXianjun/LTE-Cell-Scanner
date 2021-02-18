@@ -7,8 +7,23 @@ end
 
 bits = sib_info.bits;
 
+% isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+
 fid = fopen('tmp_sib_info.per', 'w');
-fwrite(fid, bits, 'ubit1', 'b');
+
+% if isOctave
+  len = length(bits);
+  if mod(len, 8) > 0
+    disp('SIB len error!');
+    return;
+  end
+  bits_uint8 = reshape(bits, [8, len/8])';
+  bits_uint8 = bi2de(bits_uint8, 'left-msb');
+  fwrite(fid, bits_uint8, 'uint8', 'b');
+% else
+%   fwrite(fid, bits, 'ubit1', 'b');
+% end
+
 fclose(fid);
 
 disp('Calling asn1c decoder (../asn1_test/LTE-BCCH-DL-SCH-decode/progname) for BCCH-DL-SCH-Message.');
