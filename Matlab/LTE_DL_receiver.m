@@ -46,15 +46,16 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
 elseif nargin == 3 % freq lna_gain vga_gain
-    freq_real = varargin{1}*1e6;
-    lna_gain = varargin{2};
-    vga_gain = varargin{3};
+    freq_real = str2double(varargin{1})*1e6;
+    lna_gain = str2double(varargin{2});
+    vga_gain = str2double(varargin{3});
     [~, lna_gain_new, vga_gain_new] = hackrf_gain_regulation(0, lna_gain, vga_gain);
     
     filename_raw = 'hackrf_live_tmp.bin';
     delete(filename_raw);
     
     cmd_str = ['hackrf_transfer -r ' filename_raw ' -f ' num2str(freq_real) ' -s ' num2str(raw_sampling_rate) ' -b 20000000 -n ' num2str((num_radioframe*10+10)*(1e-3)*raw_sampling_rate) ' -l ' num2str(lna_gain_new) ' -a 1 -g ' num2str(vga_gain_new) ];
+    disp(cmd_str);
     system(cmd_str);
     filename = ['f' num2str(varargin{1}) '_s19.2_bw20_0.08s_hackrf_runtime.bin'];
     fid_raw = fopen(filename_raw, 'r');
@@ -108,9 +109,9 @@ if isempty(dir([filename(1:end-4) '.mat'])) || nargin == 3
 
     figure(1);
 %     show_signal_time_frequency(r_20M, sampling_rate, 180e3);
-    show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3);
+    show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3); drawnow;
     figure(2);
-    show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate);
+    show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate); drawnow;
     
     r_pbch = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_pbch.*5, sampling_rate_pbch/raw_sampling_rate);
     r_20M = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_8x_up.*8, 8);
@@ -201,6 +202,7 @@ for cell_idx = 1 : length(cell_info)
         a = abs(tfg_comp_radioframe)';
         subplot(2,1,1); pcolor(a); shading flat; colorbar; title(title_str); xlabel('OFDM symbol idx'); ylabel('subcarrier idx'); drawnow;
         subplot(2,1,2); plot(a); drawnow;
+        savefig([num2str(radioframe_idx) '.fig']);
         clear a;
         
         % % decode pdcch

@@ -83,7 +83,11 @@ TPC = bi2de( bits(sp : sp+TPC_len-1), 'left-msb');
 TPC_LSB = bits(sp+TPC_len-1);
 sp = sp + TPC_len;
 
-DAI = bi2de( bits(sp : sp+DAI_len-1), 'left-msb');
+if DAI_len == 0
+    DAI = [];
+else
+    DAI = bi2de( bits(sp : sp+DAI_len-1), 'left-msb');
+end
 
 dci_str = [VRB_str ' ' RBassign_str ' MCS-' num2str(MCS) ...
       ' HARQ-' num2str(HARQ)  ' NEWind-' num2str(NEW) ...
