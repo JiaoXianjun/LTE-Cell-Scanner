@@ -1,26 +1,17 @@
-% Jiao Xianjun (putaoshu@gmail.com; putaoshu@msn.com)
-% LTE_DL_receiver.m
-% Use hackrf to process all 20MHz LTE bandwidth.
-% See also README in root directory, ../test, ../../rtl-sdr-LTE/scan-capture/.
-
-% Use commands in test/cap_LTE_with_HACKRF.txt to capture 20MHz LTE signal,
-% then use this script to process it by setting correct "filename".
-
-% Some scripts are borrowed from:
-% https://github.com/JiaoXianjun/LTE-Cell-Scanner
-% https://github.com/JiaoXianjun/rtl-sdr-LTE
-% https://github.com/Evrytania/LTE-Cell-Scanner
-% https://github.com/Evrytania/Matlab-Library
-% https://github.com/JiaoXianjun/multi-rtl-sdr-calibration
-
-% clear all;
+% Jiao Xianjun (putaoshu@msn.com)
 function LTE_DL_receiver(varargin)
+% From IQ sample to PDSCH output and RRC SIB messages.
+% Usage 1: Run without any argument. Change the code manually when "if nargin == 0"
+% Usage 2: Run with hackrf board. Input arguments: freq(MHz) lna_gain vga_gain
+% Usage 3: Run with pre-captured IQ file. Input argument: filename
+% See doc/how_to_capture_iq.md for IQ file capture.
+
 close all;
 warning('off','all');
 
 sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned with bin file!!!
 num_radioframe = 8; % each radio frame length 10ms. MIB period is 4 radio frame
-raw_sampling_rate = 19.2e6; % constrained by hackrf board
+raw_sampling_rate = 19.2e6; % constrained by hackrf board and LTE signal format (100RB)
 
 pss_peak_max_reserve = 2;
 num_pss_period_try = 1;
@@ -38,7 +29,7 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf_tsinghua.bin';  fc = 2585e6;
 %     filename = '../regression_test_signal_file/f2360_s19.2_bw20_1s_hackrf.bin'; fc = 2360e6;
 %     filename = '../regression_test_signal_file/f2360_s19.2_bw20_0.08s_hackrf.bin'; fc = 2360e6;
-    filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf.bin'; fc = 2585e6;
+    filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf.bin'; %fc = 2585e6;
 %     filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf1.bin'; fc = 2585e6;
 %     filename = '../regression_test_signal_file/f1860_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1860e6;
 %     filename = '../regression_test_signal_file/f1860_s19.2_bw20_1s_hackrf_home.bin'; fc = 1860e6;
@@ -75,18 +66,32 @@ elseif nargin == 3 % freq lna_gain vga_gain
     fclose(fid);
     clear a;
     
-    fc = freq_real;
+%     fc = freq_real;
 elseif nargin == 1
     filename = varargin{1};
-    fc = get_frequency_carrier_from_filename(filename);
 else
-    disp('If there are parameters, the number of parameters must be 3: freq(MHz) lna_gain vga_gain');
+    disp('Input arguments for HackRF: freq(MHz) lna_gain vga_gain');
+    disp('Input arguments for I/Q file  : filename (should like fXXXXX_s19.2_bw20_1s_hackrf.bin)');
+    return;
+end
+
+fc = get_frequency_carrier_from_filename(filename);
+if ~isempty(strfind(filename, 'rtlsdr')) % only can be used for pbch decoding (1.92Msps)
+    hardware = 'rtlsdr';
+elseif ~isempty(strfind(filename, 'hackrf'))
+    hardware = 'hackrf';
+elseif ~isempty(strfind(filename, 'bladerf'))
+    hardware = 'bladerf';
+elseif ~isempty(strfind(filename, 'usrp'))
+    hardware = 'usrp';
+else
+    disp('The filename does not have hardware information (rtlsdr/hackrf/bladerf/usrp)!');
     return;
 end
 
 disp(' ');
 disp(filename);
-disp(' ');   
+disp([' fc ' num2str(fc) '; IQ from hardware ' hardware]);   
 
 sampling_rate = 30.72e6;
 sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
@@ -104,7 +109,7 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 f_search_set = -140e3:5e3:135e3;
 
 if isempty(dir([filename(1:end-4) '.mat'])) || nargin == 3
-    r_raw = get_signal_from_bin(filename, inf, 'hackrf');
+    r_raw = get_signal_from_bin(filename, inf, hardware);
     r_raw = r_raw - mean(r_raw); % remove DC
 
     figure(1);

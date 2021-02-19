@@ -16,10 +16,9 @@ elseif strcmpi(dev, 'rtlsdr')
 elseif strcmp(dev, 'bladerf')
     [s, count] = fread(fid, num_sample_read*2, 'int16');
     s = (s(1:2:end) + 1i.*s(2:2:end))./(2^16);
-else
-    disp('get_signal_from_bin: only supports hackrf and rtlsdr now!');
-    clear s;
-    return;
+elseif strcmp(dev, 'usrp')
+    disp('to be done');
+    return
 end
 
 fclose(fid);
@@ -27,7 +26,7 @@ fclose(fid);
 if num_sample_read~=inf && count ~= (num_sample_read*2)
     s = -1;
     clear s;
-    disp('get_signal_from_hackrf_bin: No enough samples in the file!');
+    disp('get_signal_from_bin: No enough samples in the file!');
     return;
 end
 
