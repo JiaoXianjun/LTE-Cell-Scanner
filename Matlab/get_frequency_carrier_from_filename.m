@@ -1,6 +1,12 @@
 
 function fc = get_frequency_carrier_from_filename(filename)
 fc = -1;
+
+sp = strfind(filename, '/');
+if ~isempty(sp)
+    filename = filename((sp(end)+1):end);
+end
+
 sp = strfind(filename, 'f');
 if isempty(sp)
     disp('Can not find f !');

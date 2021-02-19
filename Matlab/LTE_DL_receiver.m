@@ -36,10 +36,13 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
-elseif nargin == 3 % freq lna_gain vga_gain
+elseif nargin > 1 % use real hardware. hackrf needs: freq lna_gain vga_gain
     freq_real = str2double(varargin{1})*1e6;
     lna_gain = str2double(varargin{2});
-    vga_gain = str2double(varargin{3});
+    if nargin == 3
+        vga_gain = str2double(varargin{3});
+    end
+    
     [~, lna_gain_new, vga_gain_new] = hackrf_gain_regulation(0, lna_gain, vga_gain);
     
     filename_raw = 'hackrf_live_tmp.bin';
@@ -108,20 +111,28 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 % f_search_set = 20e3:5e3:30e3; % change it wider if you don't know pre-information
 f_search_set = -140e3:5e3:135e3;
 
-if isempty(dir([filename(1:end-4) '.mat'])) || nargin == 3
+if isempty(dir([filename(1:end-4) '.mat'])) || nargin > 1
     r_raw = get_signal_from_bin(filename, inf, hardware);
     r_raw = r_raw - mean(r_raw); % remove DC
 
+    if strcmpi(hardware, 'rtlsdr')
+        raw_sampling_rate = 1.92e6; % rtlsdr limited sampling rate
+    end
+    
     figure(1);
 %     show_signal_time_frequency(r_20M, sampling_rate, 180e3);
     show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3); drawnow;
     figure(2);
     show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate); drawnow;
     
-    r_pbch = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_pbch.*5, sampling_rate_pbch/raw_sampling_rate);
-    r_20M = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_8x_up.*8, 8);
-    r_20M = r_20M(1:5:end);
-    
+    if strcmpi(hardware, 'rtlsdr')
+        r_pbch = r_raw;
+        r_20M = [];
+    else
+        r_pbch = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_pbch.*5, sampling_rate_pbch/raw_sampling_rate);
+        r_20M = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_8x_up.*8, 8);
+        r_20M = r_20M(1:5:end);
+    end
     
     [cell_info, r_pbch, r_20M] = CellSearch(r_pbch, r_20M, f_search_set, fc, sampling_carrier_twist, pss_peak_max_reserve, num_pss_period_try, combined_pss_peak_range, par_th, num_peak_th);
     
@@ -131,6 +142,30 @@ if isempty(dir([filename(1:end-4) '.mat'])) || nargin == 3
 else
     load([filename(1:end-4) '.mat']);
 %     [cell_info, r_pbch, r_20M] = CellSearch(r_pbch, r_20M, f_search_set, fc);
+    for i=1:length(cell_info)
+        peak = cell_info(i);
+        if peak.duplex_mode == 1
+            cell_mode_str = 'TDD';
+        else
+            cell_mode_str = 'FDD';
+        end
+        disp(['Cell ' num2str(i) ' information:--------------------------------------------------------']);
+        disp(['            Cell mode: ' num2str(cell_mode_str)]);
+        disp(['              Cell ID: ' num2str(peak.n_id_cell)]);
+        disp(['   Num. eNB Ant ports: ' num2str(peak.n_ports)]);
+        disp(['    Carrier frequency: ' num2str(fc/1e6) 'MHz']);
+        disp(['Residual freq. offset: ' num2str(peak.freq_superfine/1e3) 'kHz']);
+        disp(['       RX power level: ' num2str(10*log10(peak.pow))]);
+        disp(['              CP type: ' peak.cp_type]);
+        disp(['              Num. RB: ' num2str(peak.n_rb_dl)]);
+        disp(['       PHICH duration: ' peak.phich_dur]);
+        disp(['  PHICH resource type: ' num2str(peak.phich_res)]);
+    end
+end
+
+if strcmpi(hardware, 'rtlsdr')
+    disp('The low sampling rate (1.92M) of rtlsdr can not support 100RB demodulation!');
+    return;
 end
 
 % cell_info
@@ -205,8 +240,8 @@ for cell_idx = 1 : length(cell_info)
         
         figure(10);
         a = abs(tfg_comp_radioframe)';
-        subplot(2,1,1); pcolor(a); shading flat; colorbar; title(title_str); xlabel('OFDM symbol idx'); ylabel('subcarrier idx'); drawnow;
-        subplot(2,1,2); plot(a); drawnow;
+        subplot(2,1,1); pcolor(a); shading flat; title(title_str); xlabel('OFDM symbol idx'); ylabel('subcarrier idx'); drawnow; %colorbar; 
+        subplot(2,1,2); plot(a); xlabel('subcarrier idx'); ylabel('abs'); legend('diff color -- OFDM symbol'); grid on; drawnow; %title('color -- OFDM symbol');  
         savefig([num2str(radioframe_idx) '.fig']);
         clear a;
         
