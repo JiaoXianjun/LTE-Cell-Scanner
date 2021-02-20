@@ -2,7 +2,10 @@
 function LTE_DL_receiver(varargin)
 % From IQ sample to PDSCH output and RRC SIB messages.
 % Usage 1: Run without any argument. Change the code manually when "if nargin == 0"
-% Usage 2: Run with hackrf board. Input arguments: freq(MHz) lna_gain vga_gain
+% Usage 2: Run with sdr board. Input arguments: freq(MHz)
+% -- Above will use default gain (AGC or fixed default value). If it doesn't work well, gain value can be input after freq:
+% -- hackrf:  lna_gain vga_gain
+% -- others: gian
 % Usage 3: Run with pre-captured IQ file. Input argument: filename
 % See doc/how_to_capture_iq.md for IQ file capture.
 
@@ -18,6 +21,8 @@ num_pss_period_try = 1;
 combined_pss_peak_range = -1;
 par_th = 8.5;
 num_peak_th = 1/2;
+
+use_iq_file = 0;
 
 if nargin == 0
     % ------------------------------------------------------------------------------------
@@ -36,7 +41,10 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
-elseif nargin > 1 % use real hardware. hackrf needs: freq lna_gain vga_gain
+elseif ~isempty(strfind(varargin{1}, '.bin'))
+        use_iq_file = 1;
+        filename = varargin{1};
+else
     freq_real = str2double(varargin{1})*1e6;
     lna_gain = str2double(varargin{2});
     if nargin == 3
@@ -68,27 +76,17 @@ elseif nargin > 1 % use real hardware. hackrf needs: freq lna_gain vga_gain
     fwrite(fid, a( (((10e-3)*raw_sampling_rate*2) + 1):end), 'int8');
     fclose(fid);
     clear a;
-    
-%     fc = freq_real;
-elseif nargin == 1
-    filename = varargin{1};
+
 else
     disp('Input arguments for HackRF: freq(MHz) lna_gain vga_gain');
     disp('Input arguments for I/Q file  : filename (should like fXXXXX_s19.2_bw20_1s_hackrf.bin)');
     return;
 end
 
-fc = get_frequency_carrier_from_filename(filename);
-if ~isempty(strfind(filename, 'rtlsdr')) % only can be used for pbch decoding (1.92Msps)
-    hardware = 'rtlsdr';
-elseif ~isempty(strfind(filename, 'hackrf'))
-    hardware = 'hackrf';
-elseif ~isempty(strfind(filename, 'bladerf'))
-    hardware = 'bladerf';
-elseif ~isempty(strfind(filename, 'usrp'))
-    hardware = 'usrp';
-else
-    disp('The filename does not have hardware information (rtlsdr/hackrf/bladerf/usrp)!');
+[fc, hardware] = get_freq_hardware_from_filename(filename);
+
+if isempty(fc) || isempty(hardware)
+    disp([filename ' does not include valid frequency or hardware info!']);
     return;
 end
 
