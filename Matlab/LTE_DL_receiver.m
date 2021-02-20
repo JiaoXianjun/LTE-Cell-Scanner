@@ -22,8 +22,6 @@ combined_pss_peak_range = -1;
 par_th = 8.5;
 num_peak_th = 1/2;
 
-use_iq_file = 0;
-
 if nargin == 0
     % ------------------------------------------------------------------------------------
     % % bin file captured by hackrf_transfer  
@@ -42,9 +40,13 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
 elseif ~isempty(strfind(varargin{1}, '.bin'))
-        use_iq_file = 1;
         filename = varargin{1};
 else
+    hardware = hardware_probe;
+    if isempty(hardware)
+        disp('No sdr board found!');
+        return;
+    end
     freq_real = str2double(varargin{1})*1e6;
     lna_gain = str2double(varargin{2});
     if nargin == 3
@@ -76,11 +78,6 @@ else
     fwrite(fid, a( (((10e-3)*raw_sampling_rate*2) + 1):end), 'int8');
     fclose(fid);
     clear a;
-
-else
-    disp('Input arguments for HackRF: freq(MHz) lna_gain vga_gain');
-    disp('Input arguments for I/Q file  : filename (should like fXXXXX_s19.2_bw20_1s_hackrf.bin)');
-    return;
 end
 
 [fc, hardware] = get_freq_hardware_from_filename(filename);
@@ -92,7 +89,7 @@ end
 
 disp(' ');
 disp(filename);
-disp([' fc ' num2str(fc) '; IQ from hardware ' hardware]);   
+disp([' fc ' num2str(fc) '; IQ from ' hardware]);   
 
 sampling_rate = 30.72e6;
 sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
