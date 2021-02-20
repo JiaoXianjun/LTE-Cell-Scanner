@@ -22,6 +22,8 @@ combined_pss_peak_range = -1;
 par_th = 8.5;
 num_peak_th = 1/2;
 
+sdr_board = [];
+
 if nargin == 0
     % ------------------------------------------------------------------------------------
     % % bin file captured by hackrf_transfer  
@@ -42,23 +44,34 @@ if nargin == 0
 elseif ~isempty(strfind(varargin{1}, '.bin'))
         filename = varargin{1};
 else
-    hardware = hardware_probe;
-    if isempty(hardware)
+    sdr_board = hardware_probe;
+    if isempty(sdr_board)
         disp('No sdr board found!');
         return;
     end
+    
     freq_real = str2double(varargin{1})*1e6;
-    lna_gain = str2double(varargin{2});
+    
+    lna_gain  = -1;
+    vga_gain = -1;
+    if nargin == 2
+        lna_gain = str2double(varargin{2});
+    end
     if nargin == 3
         vga_gain = str2double(varargin{3});
     end
     
-    [~, lna_gain_new, vga_gain_new] = hackrf_gain_regulation(0, lna_gain, vga_gain);
-    
+    if strcmpi(sdr_board, 'hackrf') 
+        if lna_gain==-1 || vga_gain==-1
+            lna_gain = 40;
+            vga_gain = 40;
+        else
+            [~, lna_gain, vga_gain] = hackrf_gain_regulation(0, lna_gain, vga_gain);
+        end
+        
     filename_raw = 'hackrf_live_tmp.bin';
     delete(filename_raw);
-    
-    cmd_str = ['hackrf_transfer -r ' filename_raw ' -f ' num2str(freq_real) ' -s ' num2str(raw_sampling_rate) ' -b 20000000 -n ' num2str((num_radioframe*10+10)*(1e-3)*raw_sampling_rate) ' -l ' num2str(lna_gain_new) ' -a 1 -g ' num2str(vga_gain_new) ];
+    cmd_str = ['hackrf_transfer -r ' filename_raw ' -f ' num2str(freq_real) ' -s ' num2str(raw_sampling_rate) ' -b 20000000 -n ' num2str((num_radioframe*10+10)*(1e-3)*raw_sampling_rate) ' -l ' num2str(lna_gain) ' -a 1 -g ' num2str(vga_gain) ];
     disp(cmd_str);
     system(cmd_str);
     filename = ['f' num2str(varargin{1}) '_s19.2_bw20_0.08s_hackrf_runtime.bin'];
@@ -106,7 +119,7 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 % f_search_set = 20e3:5e3:30e3; % change it wider if you don't know pre-information
 f_search_set = -140e3:5e3:135e3;
 
-if isempty(dir([filename(1:end-4) '.mat'])) || nargin > 1
+if isempty(dir([filename(1:end-4) '.mat'])) || ~isempty(sdr_board)
     r_raw = get_signal_from_bin(filename, inf, hardware);
     r_raw = r_raw - mean(r_raw); % remove DC
 
@@ -159,7 +172,7 @@ else
 end
 
 if strcmpi(hardware, 'rtlsdr')
-    disp('The low sampling rate (1.92M) of rtlsdr can not support 100RB demodulation!');
+    disp('The low sampling rate (1.92M) of rtlsdr can not support 100RB demodulation! End of program.');
     return;
 end
 
