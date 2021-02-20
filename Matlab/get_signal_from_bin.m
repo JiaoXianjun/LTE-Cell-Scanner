@@ -1,4 +1,4 @@
-function s = get_signal_from_bin(filename, num_sample_read, dev, varargin)
+function s = get_signal_from_bin(filename, num_sample_read, dev)
 
 fid = fopen(filename);
 
@@ -26,8 +26,8 @@ if num_sample_read~=inf && count ~= (num_sample_read*2)
     disp('get_signal_from_bin: No enough samples in the file!');
     return;
 end
-
-if nargin == 1
-    num_sample_drop = str2double(varargin{1});
-    s = s((num_sample_drop+1):end);
-end
+% 
+% if nargin == 1
+%     num_sample_drop = str2double(varargin{1});
+%     s = s((num_sample_drop+1):end);
+% end

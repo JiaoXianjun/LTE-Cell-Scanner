@@ -43,10 +43,10 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
-elseif ~isempty(strfind(varargin{1}, '.bin'))
+elseif ~isempty(strfind(varargin{1}, '.bin')) % Get IQ filename
         filename = varargin{1};
-else
-    sdr_board = hardware_probe; % Detect which board is presented.
+else % Detect sdr board and capture IQ to file
+    sdr_board = hardware_probe;
     if isempty(sdr_board)
         disp('No sdr board found!');
         return;
@@ -174,11 +174,10 @@ else
 end
 
 if strcmpi(hardware, 'rtlsdr')
-    disp('The low sampling rate (1.92M) of rtlsdr can not support 100RB demodulation! End of program.');
+    disp('The sampling rate (1.92M) of rtlsdr can not support 100RB demodulation! End of program.');
     return;
 end
 
-% cell_info
 uldl_str = [ ...
         '|D|S|U|U|U|D|S|U|U|U|'; ...
         '|D|S|U|U|D|D|S|U|U|D|'; ...
