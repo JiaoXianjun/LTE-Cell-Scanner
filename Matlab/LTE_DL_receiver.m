@@ -1,20 +1,22 @@
 % Jiao Xianjun (putaoshu@msn.com)
 function LTE_DL_receiver(varargin)
 % From IQ sample to PDSCH output and RRC SIB messages.
+
 % Usage 1: Run without any argument. Change the code manually when "if nargin == 0"
+
 % Usage 2: Run with sdr board. Input arguments: freq(MHz)
-% -- Above will use default gain (AGC or fixed default value). If it doesn't work well, gain value can be input after freq:
-% -- hackrf:  lna_gain vga_gain
-% -- others: gian
-% Usage 3: Run with pre-captured IQ file. Input argument: filename
-% See doc/how_to_capture_iq.md for IQ file capture.
+% -- Above will use default gain (AGC or fixed default value). If it doesn't work well, at most two gain values can be input after freq:
+% -- Example: LTE_DL_receiver 2528 40 30 (Carrier frequency 2528Mhz; gain1 40dB; gain2 30dB)
+% -- Hackrf uses gain1 as lna gain and gain2 as vga gain. Other boards pick only the 1st gain value.
+
+% Usage 3: Run with pre-captured IQ file. Input argument: filename (Should follow style: f2585_s19.2_bw20_0.08s_hackrf.bin)
 
 close all;
 warning('off','all');
 
 sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned with bin file!!!
-num_radioframe = 8; % each radio frame length 10ms. MIB period is 4 radio frame
-raw_sampling_rate = 19.2e6; % constrained by hackrf board and LTE signal format (100RB)
+num_radioframe = 8; % Each radio frame length 10ms. MIB period is 4 radio frame
+raw_sampling_rate = 19.2e6; % Constrained by hackrf board and LTE signal format (100RB). Rtlsdr uses 1.92e6 due to hardware limitation
 
 pss_peak_max_reserve = 2;
 num_pss_period_try = 1;
@@ -44,7 +46,7 @@ if nargin == 0
 elseif ~isempty(strfind(varargin{1}, '.bin'))
         filename = varargin{1};
 else
-    sdr_board = hardware_probe;
+    sdr_board = hardware_probe; % Detect which board is presented.
     if isempty(sdr_board)
         disp('No sdr board found!');
         return;
