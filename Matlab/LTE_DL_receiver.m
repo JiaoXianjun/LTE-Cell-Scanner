@@ -16,9 +16,11 @@ warning('off','all');
 
 sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned with bin file!!!
 num_radioframe = 8; % Each radio frame length 10ms. MIB period is 4 radio frame
-raw_sampling_rate = 19.2e6; % Constrained by hackrf board and LTE signal format (100RB). Rtlsdr uses 1.92e6 due to hardware limitation
-bandwidth = 20e6;
 num_second = num_radioframe*10e-3;
+raw_sampling_rate = 19.2e6; % Constrained by hackrf board and LTE signal format (100RB). Rtlsdr uses 1.92e6 due to hardware limitation
+sampling_rate = 30.72e6;
+sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
+bandwidth = 20e6;
 
 pss_peak_max_reserve = 2;
 num_pss_period_try = 1;
@@ -38,8 +40,8 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f2565_s19.2_bw20_1s_hackrf_tsinghua.bin';  fc = 2565e6;
 %     filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf_tsinghua.bin';  fc = 2585e6;
 %     filename = '../regression_test_signal_file/f2360_s19.2_bw20_1s_hackrf.bin'; fc = 2360e6;
-%     filename = '../regression_test_signal_file/f2360_s19.2_bw20_0.08s_hackrf.bin'; fc = 2360e6;
-    filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf.bin'; %fc = 2585e6;
+    filename = '../regression_test_signal_file/f2360_s19.2_bw20_0.08s_hackrf.bin'; fc = 2360e6;
+%     filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf.bin'; %fc = 2585e6;
 %     filename = '../regression_test_signal_file/f2585_s19.2_bw20_1s_hackrf1.bin'; fc = 2585e6;
 %     filename = '../regression_test_signal_file/f1860_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1860e6;
 %     filename = '../regression_test_signal_file/f1860_s19.2_bw20_1s_hackrf_home.bin'; fc = 1860e6;
@@ -70,26 +72,28 @@ else % Detect sdr board and capture IQ to file
         raw_sampling_rate = 1.92e6;
         bandwidth = 1.2e6;
     end
-    s = get_signal_from_sdr(sdr_board, fc, raw_sampling_rate, bandwidth, num_second, gain1, gain2);
+    r_raw = get_signal_from_sdr(sdr_board, fc, raw_sampling_rate, bandwidth, num_second, gain1, gain2);
 end
 
-if ~isempty(filename)
+if ~isempty(filename) % If need to read from bin file
     [fc, sdr_board] = get_freq_hardware_from_filename(filename);
     if isempty(fc) || isempty(sdr_board)
         disp([filename ' does not include valid frequency or hardware info!']);
         return;
     end
     disp(filename);
+    
+    r_raw = get_signal_from_bin(filename, inf, sdr_board);
+    if strcmpi(sdr_board, 'rtlsdr')
+        raw_sampling_rate = 1.92e6; % rtlsdr limited sampling rate
+    end
 end
-
-disp([' fc ' num2str(fc) '; IQ from ' sdr_board ' -- ' filename]);   
-
-sampling_rate = 30.72e6;
-sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
+disp([' fc ' num2str(fc) '; IQ from ' sdr_board ' ' filename]);   
 
 coef_pbch = fir1(254, (0.18e6*6+150e3)/raw_sampling_rate); %freqz(coef_pbch, 1, 1024);
 coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 
+% --------------------------- Cell Search ---------------------------
 % DS_COMB_ARM = 2;
 % FS_LTE = 30720000;
 % thresh1_n_nines=12;
@@ -99,22 +103,16 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 % f_search_set = 20e3:5e3:30e3; % change it wider if you don't know pre-information
 f_search_set = -140e3:5e3:135e3;
 
-% --------------------------- Cell Search ---------------------------
-if isempty(dir([filename(1:end-4) '.mat'])) || ~isempty(sdr_board)
-    r_raw = get_signal_from_bin(filename, inf, hardware);
+if isempty(dir([filename(1:end-4) '.mat']))
     r_raw = r_raw - mean(r_raw); % remove DC
 
-    if strcmpi(hardware, 'rtlsdr')
-        raw_sampling_rate = 1.92e6; % rtlsdr limited sampling rate
-    end
-    
     figure(1);
 %     show_signal_time_frequency(r_20M, sampling_rate, 180e3);
     show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3); drawnow;
     figure(2);
     show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate); drawnow;
     
-    if strcmpi(hardware, 'rtlsdr')
+    if strcmpi(sdr_board, 'rtlsdr')
         r_pbch = r_raw;
         r_20M = [];
     else
@@ -152,7 +150,7 @@ else
     end
 end
 
-if strcmpi(hardware, 'rtlsdr')
+if strcmpi(sdr_board, 'rtlsdr')
     disp('The sampling rate (1.92M) of rtlsdr can not support 100RB demodulation! End of program.');
     return;
 end
@@ -174,6 +172,9 @@ for cell_idx = 1 : length(cell_info)
 % for cell_idx = 1 : 1
     cell_tmp = cell_info(cell_idx);
     [tfg, tfg_timestamp, cell_tmp]=extract_tfg(cell_tmp,r_20M,fc,sampling_carrier_twist, cell_tmp.n_rb_dl);
+    if isempty(tfg)
+        continue;
+    end
 %     [tfg_comp, tfg_comp_timestamp, cell_tmp]=tfoec(cell_tmp, tfg, tfg_timestamp, fc, sampling_carrier_twist, cell_tmp.n_rb_dl);
 %     cell_tmp=decode_mib(cell_tmp,tfg_comp(:, 565:636));
     

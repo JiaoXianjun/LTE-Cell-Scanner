@@ -21,6 +21,10 @@ function [tfg, tfg_timestamp, peak_out]=extract_tfg(peak,capbuf,fc,sampling_carr
 % You should have received a copy of the GNU Affero General Public License
 % along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+tfg = [];
+tfg_timestamp = [];
+peak_out = [];
+
 frame_start=peak.frame_start;
 cp_type=peak.cp_type;
 freq_fine=peak.freq_fine;
