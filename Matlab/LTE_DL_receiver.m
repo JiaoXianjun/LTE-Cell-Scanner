@@ -17,6 +17,8 @@ warning('off','all');
 sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned with bin file!!!
 num_radioframe = 8; % Each radio frame length 10ms. MIB period is 4 radio frame
 raw_sampling_rate = 19.2e6; % Constrained by hackrf board and LTE signal format (100RB). Rtlsdr uses 1.92e6 due to hardware limitation
+bandwidth = 20e6;
+num_second = num_radioframe*10e-3;
 
 pss_peak_max_reserve = 2;
 num_pss_period_try = 1;
@@ -25,6 +27,7 @@ par_th = 8.5;
 num_peak_th = 1/2;
 
 sdr_board = [];
+filename = [];
 
 if nargin == 0
     % ------------------------------------------------------------------------------------
@@ -44,7 +47,7 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
 elseif ~isempty(strfind(varargin{1}, '.bin')) % Get IQ filename
-        filename = varargin{1};
+    filename = varargin{1};
 else % Detect sdr board and capture IQ to file
     sdr_board = hardware_probe;
     if isempty(sdr_board)
@@ -52,59 +55,34 @@ else % Detect sdr board and capture IQ to file
         return;
     end
     
-    freq_real = str2double(varargin{1})*1e6;
+    fc = str2double(varargin{1})*1e6;
     
-    lna_gain  = -1;
-    vga_gain = -1;
+    gain1 = -1;
+    gain2 = -1;
     if nargin == 2
-        lna_gain = str2double(varargin{2});
+        gain1 = str2double(varargin{2});
     end
     if nargin == 3
-        vga_gain = str2double(varargin{3});
+        gain2 = str2double(varargin{3});
     end
     
-    if strcmpi(sdr_board, 'hackrf') 
-        if lna_gain==-1 || vga_gain==-1
-            lna_gain = 40;
-            vga_gain = 40;
-        else
-            [~, lna_gain, vga_gain] = hackrf_gain_regulation(0, lna_gain, vga_gain);
-        end
-        
-    filename_raw = 'hackrf_live_tmp.bin';
-    delete(filename_raw);
-    cmd_str = ['hackrf_transfer -r ' filename_raw ' -f ' num2str(freq_real) ' -s ' num2str(raw_sampling_rate) ' -b 20000000 -n ' num2str((num_radioframe*10+10)*(1e-3)*raw_sampling_rate) ' -l ' num2str(lna_gain) ' -a 1 -g ' num2str(vga_gain) ];
-    disp(cmd_str);
-    system(cmd_str);
-    filename = ['f' num2str(varargin{1}) '_s19.2_bw20_0.08s_hackrf_runtime.bin'];
-    fid_raw = fopen(filename_raw, 'r');
-    if fid_raw == -1
-        disp('Open hackrf_live_tmp.bin failed!');
-        return;
+    if strcmpi(sdr_board, 'rtlsdr')
+        raw_sampling_rate = 1.92e6;
+        bandwidth = 1.2e6;
     end
-    a = fread(fid_raw, inf, 'int8');
-    fclose(fid_raw);
-    
-    fid = fopen(filename, 'w');
-    if fid_raw == -1
-        disp(['Create ' filename ' failed!']);
-        return;
-    end
-    fwrite(fid, a( (((10e-3)*raw_sampling_rate*2) + 1):end), 'int8');
-    fclose(fid);
-    clear a;
+    s = get_signal_from_sdr(sdr_board, fc, raw_sampling_rate, bandwidth, num_second, gain1, gain2);
 end
 
-[fc, hardware] = get_freq_hardware_from_filename(filename);
-
-if isempty(fc) || isempty(hardware)
-    disp([filename ' does not include valid frequency or hardware info!']);
-    return;
+if ~isempty(filename)
+    [fc, sdr_board] = get_freq_hardware_from_filename(filename);
+    if isempty(fc) || isempty(sdr_board)
+        disp([filename ' does not include valid frequency or hardware info!']);
+        return;
+    end
+    disp(filename);
 end
 
-disp(' ');
-disp(filename);
-disp([' fc ' num2str(fc) '; IQ from ' hardware]);   
+disp([' fc ' num2str(fc) '; IQ from ' sdr_board ' -- ' filename]);   
 
 sampling_rate = 30.72e6;
 sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
@@ -121,6 +99,7 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 % f_search_set = 20e3:5e3:30e3; % change it wider if you don't know pre-information
 f_search_set = -140e3:5e3:135e3;
 
+% --------------------------- Cell Search ---------------------------
 if isempty(dir([filename(1:end-4) '.mat'])) || ~isempty(sdr_board)
     r_raw = get_signal_from_bin(filename, inf, hardware);
     r_raw = r_raw - mean(r_raw); % remove DC
@@ -178,6 +157,7 @@ if strcmpi(hardware, 'rtlsdr')
     return;
 end
 
+% ----------------Decode PDSCH in wider bandwidth-------------------
 uldl_str = [ ...
         '|D|S|U|U|U|D|S|U|U|U|'; ...
         '|D|S|U|U|D|D|S|U|U|D|'; ...
