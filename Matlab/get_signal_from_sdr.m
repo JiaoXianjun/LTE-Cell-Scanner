@@ -24,6 +24,14 @@ if strcmpi(sdr_board, 'hackrf')
 elseif strcmpi(sdr_board, 'rtlsdr')
 	format_str = 'uint8';
 	filename_raw = 'rtlsdr_tmp.bin';
+    delete(filename_raw);
+    filename = ['f' freq_str '_s' sampling_rate_str '_bw' bandwidth_str '_' num2str(num_second) 's_rtlsdr.bin'];
+
+    if gain1==-1
+        gain1 = 0;
+    end
+
+    cmd_str = ['rtl_sdr -f ' num2str(freq) ' -s ' num2str(sampling_rate) ' -n ' num2str((num_second+num_second_drop)*sampling_rate) ' -g ' num2str(gain1) ' ' filename_raw];
 elseif strcmp(sdr_board, 'bladerf')
     format_str = 'int16';
     filename_raw = 'bladerf_tmp.bin';

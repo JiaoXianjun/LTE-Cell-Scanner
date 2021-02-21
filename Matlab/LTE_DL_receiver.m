@@ -18,6 +18,7 @@ sampling_carrier_twist = 0; % ATTENTION! If this is 1, make sure fc is aligned w
 num_radioframe = 8; % Each radio frame length 10ms. MIB period is 4 radio frame
 num_second = num_radioframe*10e-3;
 raw_sampling_rate = 19.2e6; % Constrained by hackrf board and LTE signal format (100RB). Rtlsdr uses 1.92e6 due to hardware limitation
+nRB = 100;
 sampling_rate = 30.72e6;
 sampling_rate_pbch = sampling_rate/16; % LTE spec. 30.72MHz/16.
 bandwidth = 20e6;
@@ -57,19 +58,20 @@ else % Detect sdr board and capture IQ to file
         return;
     end
     
-    fc = str2double(varargin{1})*1e6;
+    fc = varargin{1}*1e6;
     
     gain1 = -1;
     gain2 = -1;
-    if nargin == 2
-        gain1 = str2double(varargin{2});
+    if nargin >= 2
+        gain1 = varargin{2};
     end
-    if nargin == 3
-        gain2 = str2double(varargin{3});
+    if nargin >= 3
+        gain2 = varargin{3};
     end
     
     if strcmpi(sdr_board, 'rtlsdr')
         raw_sampling_rate = 1.92e6;
+        nRB = 6; % PBCH only. for rtlsdr
         bandwidth = 1.2e6;
     end
     r_raw = get_signal_from_sdr(sdr_board, fc, raw_sampling_rate, bandwidth, num_second, gain1, gain2);
@@ -86,12 +88,15 @@ if ~isempty(filename) % If need to read from bin file
     r_raw = get_signal_from_bin(filename, inf, sdr_board);
     if strcmpi(sdr_board, 'rtlsdr')
         raw_sampling_rate = 1.92e6; % rtlsdr limited sampling rate
+        nRB = 6; % PBCH only. for rtlsdr
     end
 end
-disp([' fc ' num2str(fc) '; IQ from ' sdr_board ' ' filename]);   
+disp(['fc ' num2str(fc) '; IQ from ' sdr_board ' ' filename]);   
 
-coef_pbch = fir1(254, (0.18e6*6+150e3)/raw_sampling_rate); %freqz(coef_pbch, 1, 1024);
-coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
+if ~strcmpi(sdr_board, 'rtlsdr')
+    coef_pbch = fir1(254, (0.18e6*6+150e3)/raw_sampling_rate); %freqz(coef_pbch, 1, 1024);
+    coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
+end
 
 % --------------------------- Cell Search ---------------------------
 % DS_COMB_ARM = 2;
@@ -103,30 +108,7 @@ coef_8x_up = fir1(254, 20e6/(raw_sampling_rate*8)); %freqz(coef_8x_up, 1, 1024);
 % f_search_set = 20e3:5e3:30e3; % change it wider if you don't know pre-information
 f_search_set = -140e3:5e3:135e3;
 
-if isempty(dir([filename(1:end-4) '.mat']))
-    r_raw = r_raw - mean(r_raw); % remove DC
-
-    figure(1);
-%     show_signal_time_frequency(r_20M, sampling_rate, 180e3);
-    show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3); drawnow;
-    figure(2);
-    show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate); drawnow;
-    
-    if strcmpi(sdr_board, 'rtlsdr')
-        r_pbch = r_raw;
-        r_20M = [];
-    else
-        r_pbch = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_pbch.*5, sampling_rate_pbch/raw_sampling_rate);
-        r_20M = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_8x_up.*8, 8);
-        r_20M = r_20M(1:5:end);
-    end
-    
-    [cell_info, r_pbch, r_20M] = CellSearch(r_pbch, r_20M, f_search_set, fc, sampling_carrier_twist, pss_peak_max_reserve, num_pss_period_try, combined_pss_peak_range, par_th, num_peak_th);
-    
-    r_pbch = r_pbch.';
-    r_20M = r_20M.';
-    save([filename(1:end-4) '.mat'], 'r_pbch', 'r_20M', 'cell_info');
-else
+if (~isempty(filename)) && exist([filename(1:end-4) '.mat'], 'file')
     load([filename(1:end-4) '.mat']);
 %     [cell_info, r_pbch, r_20M] = CellSearch(r_pbch, r_20M, f_search_set, fc);
     for i=1:length(cell_info)
@@ -148,6 +130,29 @@ else
         disp(['       PHICH duration: ' peak.phich_dur]);
         disp(['  PHICH resource type: ' num2str(peak.phich_res)]);
     end
+else
+    r_raw = r_raw - mean(r_raw); % remove DC
+
+    figure(1);
+%     show_signal_time_frequency(r_20M, sampling_rate, 180e3);
+    show_signal_time_frequency(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, 50e3); drawnow;
+    figure(2);
+    show_time_frequency_grid_raw(r_raw(1 : (25e-3*raw_sampling_rate)), raw_sampling_rate, nRB); drawnow;
+    
+    if strcmpi(sdr_board, 'rtlsdr')
+        r_pbch = r_raw;
+        r_20M = [];
+    else
+        r_pbch = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_pbch.*5, sampling_rate_pbch/raw_sampling_rate);
+        r_20M = filter_wo_tail(r_raw(1 : (80e-3*raw_sampling_rate)), coef_8x_up.*8, 8);
+        r_20M = r_20M(1:5:end);
+    end
+    
+    [cell_info, r_pbch, r_20M] = CellSearch(r_pbch, r_20M, f_search_set, fc, sampling_carrier_twist, pss_peak_max_reserve, num_pss_period_try, combined_pss_peak_range, par_th, num_peak_th);
+    
+    r_pbch = r_pbch.';
+    r_20M = r_20M.';
+    save([filename(1:end-4) '.mat'], 'r_pbch', 'r_20M', 'cell_info'); % PROBLEM!!! If filename is empty
 end
 
 if strcmpi(sdr_board, 'rtlsdr')
