@@ -152,7 +152,9 @@ else
     
     r_pbch = r_pbch.';
     r_20M = r_20M.';
-    save([filename(1:end-4) '.mat'], 'r_pbch', 'r_20M', 'cell_info'); % PROBLEM!!! If filename is empty
+    if ~isempty(filename)
+        save([filename(1:end-4) '.mat'], 'r_pbch', 'r_20M', 'cell_info');
+    end
 end
 
 if strcmpi(sdr_board, 'rtlsdr')
