@@ -35,7 +35,34 @@ elseif strcmpi(sdr_board, 'rtlsdr')
     cmd_str = ['rtl_sdr -f ' cmd_freq_str ' -s ' cmd_sampling_rate_str ' -n ' cmd_n_sample_str ' -g ' num2str(gain1) ' ' filename_raw];
 elseif strcmp(sdr_board, 'bladerf')
     format_str = 'int16';
-
+    
+    if gain1==-1
+        gain1 = 60;
+    end
+    if gain2==-1
+        gain2 = 25;
+    end
+    
+    fid_bladerf_script = fopen('bladerf.script', 'w');
+    if fid_bladerf_script == -1
+        disp('Create bladerf.script failed!');
+        return;
+    end
+    fprintf(fid_bladerf_script, 'set frequency rx %d\n', freq);
+    fprintf(fid_bladerf_script, 'set samplerate rx %d\n', sampling_rate);
+    fprintf(fid_bladerf_script, 'set bandwidth rx %d\n', bandwidth);
+    fprintf(fid_bladerf_script, 'set gain rx %d\n', gain1);
+%     fprintf(fid_bladerf_script, 'set lnagain %d\n', gain1);
+%     fprintf(fid_bladerf_script, 'set rxvga1 %d\n', gain2);
+%     fprintf(fid_bladerf_script, 'set rxvga2 %d\n', 30);
+%     fprintf(fid_bladerf_script, 'cal lms\n');
+%     fprintf(fid_bladerf_script, 'cal dc rx\n');
+    fprintf(fid_bladerf_script, 'rx config file=%s format=bin n=%s\n', filename_raw, cmd_n_sample_str);
+    fprintf(fid_bladerf_script, 'rx start\n');
+    fprintf(fid_bladerf_script, 'rx wait\n');
+    fclose(fid_bladerf_script);
+    
+    cmd_str = 'bladeRF-cli -s bladerf.script';
 elseif strcmp(sdr_board, 'usrp')
     format_str = 'int16';
     

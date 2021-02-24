@@ -152,7 +152,7 @@ else
     
     r_pbch = r_pbch.';
     r_20M = r_20M.';
-    if ~isempty(filename)
+    if ~isempty(filename) && ~isempty(cell_info)
         save([filename(1:end-4) '.mat'], 'r_pbch', 'r_20M', 'cell_info');
     end
 end
