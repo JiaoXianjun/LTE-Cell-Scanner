@@ -14,7 +14,7 @@ if ~isempty(strfind(cmdout, 'Address'))
     return;
 end
 
-[~, cmdout] = system('sh uhd_find_devices');
+[~, cmdout] = system('uhd_find_devices');
 if ~isempty(strfind(cmdout, 'type'))
     hardware = 'usrp';
     return;

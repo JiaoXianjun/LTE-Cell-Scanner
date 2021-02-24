@@ -5,12 +5,16 @@ num_second_drop = 0.01; % 10ms
 freq_str = num2str(round(freq/1e5)/10);
 sampling_rate_str = num2str(round(sampling_rate/1e4)/100);
 bandwidth_str = num2str(round(bandwidth/1e4)/100);
+cmd_freq_str = num2str(freq);
+cmd_sampling_rate_str = num2str(sampling_rate);
+cmd_n_sample_str = num2str((num_second+num_second_drop)*sampling_rate);
+
+filename_raw = [sdr_board '_tmp.bin'];
+delete(filename_raw);
+filename = ['f' freq_str '_s' sampling_rate_str '_bw' bandwidth_str '_' num2str(num_second) 's_' sdr_board '.bin'];
 
 if strcmpi(sdr_board, 'hackrf')
     format_str = 'int8';
-    filename_raw = 'hackrf_tmp.bin';
-    delete(filename_raw);
-    filename = ['f' freq_str '_s' sampling_rate_str '_bw' bandwidth_str '_' num2str(num_second) 's_hackrf.bin'];
 
     if gain1==-1
         gain1 = 40;
@@ -20,24 +24,26 @@ if strcmpi(sdr_board, 'hackrf')
     end
     [~, gain1, gain2] = hackrf_gain_regulation(0, gain1, gain2);
 
-    cmd_str = ['hackrf_transfer -r ' filename_raw ' -f ' num2str(freq) ' -s ' num2str(sampling_rate) ' -b ' num2str(bandwidth) ' -n ' num2str((num_second+num_second_drop)*sampling_rate) ' -l ' num2str(gain1) ' -a 1 -g ' num2str(gain2) ];
+    cmd_str = ['hackrf_transfer -f ' cmd_freq_str ' -s ' cmd_sampling_rate_str ' -b ' num2str(bandwidth) ' -n ' cmd_n_sample_str ' -l ' num2str(gain1) ' -a 1 -g ' num2str(gain2) ' -r ' filename_raw];
 elseif strcmpi(sdr_board, 'rtlsdr')
 	format_str = 'uint8';
-	filename_raw = 'rtlsdr_tmp.bin';
-    delete(filename_raw);
-    filename = ['f' freq_str '_s' sampling_rate_str '_bw' bandwidth_str '_' num2str(num_second) 's_rtlsdr.bin'];
 
     if gain1==-1
         gain1 = 0;
     end
 
-    cmd_str = ['rtl_sdr -f ' num2str(freq) ' -s ' num2str(sampling_rate) ' -n ' num2str((num_second+num_second_drop)*sampling_rate) ' -g ' num2str(gain1) ' ' filename_raw];
+    cmd_str = ['rtl_sdr -f ' cmd_freq_str ' -s ' cmd_sampling_rate_str ' -n ' cmd_n_sample_str ' -g ' num2str(gain1) ' ' filename_raw];
 elseif strcmp(sdr_board, 'bladerf')
     format_str = 'int16';
-    filename_raw = 'bladerf_tmp.bin';
+
 elseif strcmp(sdr_board, 'usrp')
     format_str = 'int16';
-    filename_raw = 'usrp_tmp.bin';
+    
+    if gain1==-1
+        gain1 = 100;
+    end
+    
+    cmd_str = ['uhd_rx_cfile -f ' cmd_freq_str ' -r ' cmd_sampling_rate_str ' -N ' cmd_n_sample_str ' -s -g ' num2str(gain1) ' ' filename_raw];
 end
 
 disp(cmd_str);
