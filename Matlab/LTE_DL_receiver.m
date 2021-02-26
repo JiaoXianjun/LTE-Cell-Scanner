@@ -49,8 +49,13 @@ if nargin == 0
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f1890_s19.2_bw20_1s_hackrf_home1.bin'; fc = 1890e6;
 %     filename = '../regression_test_signal_file/f2605_s19.2_bw20_0.08s_hackrf_home.bin'; fc = 2605e6;
-elseif ~isempty(strfind(varargin{1}, '.bin')) % Get IQ filename
-    filename = varargin{1};
+elseif isstr(varargin{1})
+    if ~isempty(strfind(varargin{1}, '.bin')) % Get IQ filename
+        filename = varargin{1};
+    else
+        disp('Filename is not valid!');
+        return;
+    end
 else % Detect sdr board and capture IQ to file
     sdr_board = hardware_probe;
     if isempty(sdr_board)
